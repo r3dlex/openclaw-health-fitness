@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "agent-helper"
+version = "1.0.0"
+description = "Health & Fitness Agent helper — data import, report generation, dashboard management"
+authors = ["OpenClaw <noreply@openclaw.ai>"]
+readme = "README.md"
+packages = [{include = "agent_helper"}]
+
+[tool.poetry.scripts]
+agent-helper = "agent_helper.cli:main"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.4"
+pytest = "^8.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]

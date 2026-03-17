@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Health Fitness Dashboard</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f1f5f9;
+      --accent: #22d3ee;
+      --success: #4ade80;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --purple: #8b5cf6;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .header { text-align: center; margin-bottom: 20px; }
+    .header h1 { font-size: 2rem; margin-bottom: 5px; }
+    .header p { color: #94a3b8; font-size: 0.9rem; }
+
+    .period-selector {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .period-btn {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 25px;
+      background: var(--card-bg);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+    }
+
+    .period-btn:hover { background: #334155; }
+
+    .period-btn.active {
+      background: var(--accent);
+      color: var(--bg);
+      font-weight: bold;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .summary-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .summary-value {
+      font-size: 1.6rem;
+      font-weight: bold;
+      color: var(--accent);
+    }
+
+    .summary-label {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 20px;
+    }
+
+    .chart-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .chart-card h2 {
+      font-size: 1rem;
+      color: var(--accent);
+      margin-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .source-badge {
+      font-size: 0.65rem;
+      background: #334155;
+      padding: 3px 8px;
+      border-radius: 10px;
+      color: #94a3b8;
+    }
+
+    .bar-chart {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-around;
+      height: 180px;
+      padding: 10px 0;
+      border-bottom: 2px solid #334155;
+      gap: 4px;
+      position: relative;
+    }
+
+    .bar-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      flex: 1;
+      max-width: 40px;
+      height: 100%;
+    }
+
+    .bar-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      flex: 1;
+      width: 100%;
+    }
+
+    .bar {
+      width: 100%;
+      background: var(--accent);
+      border-radius: 4px 4px 0 0;
+      min-height: 2px;
+      transition: height 0.5s ease;
+    }
+
+    .bar:hover { opacity: 0.8; }
+
+    .bar-label {
+      font-size: 0.65rem;
+      color: #64748b;
+      margin-top: 6px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .bar-value {
+      font-size: 0.6rem;
+      color: #94a3b8;
+      margin-bottom: 4px;
+      flex-shrink: 0;
+    }
+
+    .goal-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      border-top: 1px dashed var(--warning);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .goal-line-label {
+      position: absolute;
+      right: 2px;
+      top: -12px;
+      font-size: 0.55rem;
+      color: var(--warning);
+    }
+
+    .goals-list { margin-top: 10px; }
+
+    .goal-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #334155;
+    }
+
+    .goal-item:last-child { border-bottom: none; }
+
+    .progress-bar {
+      width: 100%;
+      height: 10px;
+      background: #334155;
+      border-radius: 5px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--success);
+      border-radius: 5px;
+      transition: width 0.5s ease;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      color: #64748b;
+      font-size: 0.8rem;
+    }
+
+    .no-data {
+      text-align: center;
+      padding: 20px;
+      color: #64748b;
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 600px) {
+      .charts-grid { grid-template-columns: 1fr; }
+      .summary-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Health Fitness Dashboard</h1>
+    <p>Real-time data &bull; Auto-refreshes every 30s</p>
+  </div>
+
+  <div class="period-selector">
+    <button class="period-btn" id="btn-day" onclick="setPeriod('day')">Today</button>
+    <button class="period-btn active" id="btn-week" onclick="setPeriod('week')">Week</button>
+    <button class="period-btn" id="btn-month" onclick="setPeriod('month')">Month</button>
+    <button class="period-btn" id="btn-year" onclick="setPeriod('year')">Year</button>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-value" id="sum-calories">--</div>
+      <div class="summary-label">Avg Calories</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-value" id="sum-protein">--</div>
+      <div class="summary-label">Avg Protein (g)</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-value" id="sum-hydration">--</div>
+      <div class="summary-label">Avg Hydration (ml)</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-value" id="sum-sleep">--</div>
+      <div class="summary-label">Avg Sleep (hrs)</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-value" id="sum-weight">--</div>
+      <div class="summary-label">Weight (kg)</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-value" id="sum-steps">--</div>
+      <div class="summary-label">Avg Steps</div>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h2>Calories <span class="source-badge">Manual</span></h2>
+      <div class="bar-chart" id="calories-chart"></div>
+    </div>
+
+    <div class="chart-card">
+      <h2>Hydration <span class="source-badge">Manual</span></h2>
+      <div class="bar-chart" id="hydration-chart"></div>
+    </div>
+
+    <div class="chart-card">
+      <h2>Protein <span class="source-badge">Manual</span></h2>
+      <div class="bar-chart" id="protein-chart"></div>
+    </div>
+
+    <div class="chart-card">
+      <h2>Sleep <span class="source-badge">Zepp / HC</span></h2>
+      <div class="bar-chart" id="sleep-chart"></div>
+    </div>
+
+    <div class="chart-card">
+      <h2>Steps <span class="source-badge">Health Connect</span></h2>
+      <div class="bar-chart" id="steps-chart"></div>
+    </div>
+
+    <div class="chart-card">
+      <h2>Weight Goal</h2>
+      <div class="goals-list" id="weight-goals"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Last updated: <span id="update-time">--</span> | Auto-refreshes every 30 seconds
+  </div>
+
+  <script>
+    const DATA_PATH = '/data';
+    const REFRESH_INTERVAL = 30000;
+
+    let currentPeriod = 'week';
+
+    function setPeriod(period) {
+      currentPeriod = period;
+      document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
+      const el = document.getElementById('btn-' + period);
+      if (el) el.classList.add('active');
+      loadData();
+    }
+
+    function getDateRange() {
+      const end = new Date();
+      const start = new Date();
+
+      if (currentPeriod === 'day') {
+        // Just today
+      } else if (currentPeriod === 'week') {
+        start.setDate(end.getDate() - 6);
+      } else if (currentPeriod === 'month') {
+        start.setMonth(end.getMonth() - 1);
+      } else if (currentPeriod === 'year') {
+        start.setFullYear(end.getFullYear() - 1);
+      }
+
+      const dates = [];
+      const current = new Date(start);
+      while (current <= end) {
+        dates.push(current.toISOString().slice(0, 10));
+        current.setDate(current.getDate() + 1);
+      }
+      return dates;
+    }
+
+    function formatLabel(dateStr) {
+      const parts = dateStr.split('-');
+      const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      if (currentPeriod === 'day') return 'Today';
+      if (currentPeriod === 'week') return date.toLocaleDateString('en', {weekday: 'short'});
+      if (currentPeriod === 'month') return parts[2];
+      return date.toLocaleDateString('en', {month: 'short'});
+    }
+
+    function epochDaysToDate(val) {
+      const num = parseInt(val);
+      if (!isNaN(num) && num > 10000) {
+        const d = new Date(1970, 0, 1);
+        d.setDate(d.getDate() + num);
+        return d.toISOString().slice(0, 10);
+      }
+      return String(val);
+    }
+
+    async function loadData() {
+      try {
+        const [nutrition, hydration, sleep, steps, bodyMetrics, config] = await Promise.all([
+          fetchJSON('nutrition.json'),
+          fetchJSON('hydration.json'),
+          fetchJSON('sleep.json'),
+          fetchJSON('steps.json'),
+          fetchJSON('body_metrics.json'),
+          fetchJSON('config.json')
+        ]);
+
+        const dates = getDateRange();
+
+        // Normalize sleep dates (Health Connect uses epoch days)
+        const normalizedSleep = sleep.map(s => ({
+          ...s,
+          date: epochDaysToDate(s.date)
+        }));
+
+        // Deduplicate sleep by date (keep longest)
+        const sleepByDate = {};
+        normalizedSleep.forEach(s => {
+          if (!sleepByDate[s.date] || (s.duration_hours || 0) > (sleepByDate[s.date].duration_hours || 0)) {
+            sleepByDate[s.date] = s;
+          }
+        });
+
+        // Calculate daily stats
+        const stats = dates.map(date => {
+          const dayNut = nutrition.filter(n => n.timestamp && n.timestamp.startsWith(date));
+          const dayHyd = hydration.filter(h => h.timestamp && h.timestamp.startsWith(date));
+
+          return {
+            date,
+            calories: dayNut.reduce((s, n) => s + (n.estimated_calories || 0), 0),
+            protein: dayNut.reduce((s, n) => s + (n.protein_grams || 0), 0),
+            hydration: dayHyd.reduce((s, h) => s + (h.net_hydration_ml || 0), 0),
+            steps: steps?.by_date?.[date] || 0
+          };
+        });
+
+        // Averages (only count days with actual data)
+        const withCals = stats.filter(s => s.calories > 0);
+        const withHyd = stats.filter(s => s.hydration > 0);
+        const withSteps = stats.filter(s => s.steps > 0);
+
+        const avg = (arr, field) => arr.length ? Math.round(arr.reduce((s, d) => s + d[field], 0) / arr.length) : 0;
+
+        document.getElementById('sum-calories').textContent = avg(withCals, 'calories') || '--';
+        document.getElementById('sum-protein').textContent = avg(withCals, 'protein') || '--';
+        document.getElementById('sum-hydration').textContent = avg(withHyd, 'hydration') || '--';
+        document.getElementById('sum-steps').textContent = avg(withSteps, 'steps') ? avg(withSteps, 'steps').toLocaleString() : '--';
+
+        // Sleep average
+        const sleepInRange = dates.map(d => sleepByDate[d]).filter(s => s && s.duration_hours);
+        let avgSleep = 0;
+        if (sleepInRange.length) {
+          avgSleep = sleepInRange.reduce((s, d) => s + d.duration_hours, 0) / sleepInRange.length;
+        } else {
+          // Fall back to most recent monthly summary
+          const monthly = Object.values(sleepByDate).filter(s => s.date && s.date.length <= 7 && s.duration_hours);
+          if (monthly.length) avgSleep = monthly[monthly.length - 1].duration_hours;
+        }
+        document.getElementById('sum-sleep').textContent = avgSleep ? avgSleep.toFixed(1) : '--';
+
+        // Weight
+        const constraints = config?.user_constraints || {};
+        const weightGoal = constraints.weight_goal_kg || 98;
+        let latestWeight = constraints.current_weight_kg || 0;
+
+        if (bodyMetrics?.by_date) {
+          const weightDates = Object.keys(bodyMetrics.by_date).sort();
+          if (weightDates.length) {
+            latestWeight = bodyMetrics.by_date[weightDates[weightDates.length - 1]];
+          }
+        }
+        document.getElementById('sum-weight').textContent = latestWeight ? latestWeight.toFixed(1) : '--';
+
+        // Render charts
+        renderBarChart('calories-chart', stats, 'calories', 2800, 2500);
+        renderBarChart('hydration-chart', stats, 'hydration', 3500, 3000);
+        renderBarChart('protein-chart', stats, 'protein', 220, 180);
+
+        // Sleep chart
+        const sleepStats = dates.map(date => {
+          const entry = sleepByDate[date];
+          return {
+            date,
+            sleep: entry ? entry.duration_hours : 0,
+            deep: entry ? (entry.deep_sleep_pct || 0) : 0,
+            rem: entry ? (entry.rem_sleep_pct || 0) : 0
+          };
+        });
+        renderSleepChart('sleep-chart', sleepStats);
+
+        renderBarChart('steps-chart', stats, 'steps', 15000, 10000);
+        renderWeightGoal(latestWeight, weightGoal, constraints);
+        document.getElementById('update-time').textContent = new Date().toLocaleString();
+
+      } catch (e) {
+        console.error('Error loading data:', e);
+      }
+    }
+
+    async function fetchJSON(filename) {
+      try {
+        const res = await fetch(DATA_PATH + '/' + filename);
+        if (!res.ok) return [];
+        return await res.json();
+      } catch {
+        return [];
+      }
+    }
+
+    function renderBarChart(containerId, data, field, maxRef, goalValue) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+
+      if (!data.length) {
+        container.innerHTML = '<div class="no-data">No data</div>';
+        return;
+      }
+
+      const dataMax = Math.max(...data.map(d => d[field]));
+      const scaleMax = Math.max(dataMax, maxRef) * 1.1;
+
+      // Goal line
+      if (goalValue && scaleMax > 0) {
+        const goalPct = (goalValue / scaleMax) * 100;
+        const goalLine = document.createElement('div');
+        goalLine.className = 'goal-line';
+        goalLine.style.bottom = goalPct + '%';
+        goalLine.innerHTML = '<span class="goal-line-label">' + goalValue.toLocaleString() + '</span>';
+        container.appendChild(goalLine);
+      }
+
+      data.forEach(d => {
+        const value = d[field];
+        const heightPct = scaleMax > 0 ? (value / scaleMax) * 100 : 0;
+
+        const barContainer = document.createElement('div');
+        barContainer.className = 'bar-container';
+
+        const barValue = document.createElement('div');
+        barValue.className = 'bar-value';
+        barValue.textContent = value ? (value >= 1000 ? (value / 1000).toFixed(1) + 'k' : value) : '';
+
+        const barWrapper = document.createElement('div');
+        barWrapper.className = 'bar-wrapper';
+
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.style.height = Math.max(heightPct, value > 0 ? 3 : 0) + '%';
+
+        if (goalValue && value > 0) {
+          const ratio = value / goalValue;
+          if (ratio >= 0.9) bar.style.background = 'var(--success)';
+          else if (ratio >= 0.6) bar.style.background = 'var(--warning)';
+          else bar.style.background = 'var(--danger)';
+        }
+        if (value === 0) bar.style.background = '#334155';
+
+        const label = document.createElement('div');
+        label.className = 'bar-label';
+        label.textContent = formatLabel(d.date);
+
+        barWrapper.appendChild(bar);
+        barContainer.appendChild(barValue);
+        barContainer.appendChild(barWrapper);
+        barContainer.appendChild(label);
+        container.appendChild(barContainer);
+      });
+    }
+
+    function renderSleepChart(containerId, data) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+
+      if (!data.length) {
+        container.innerHTML = '<div class="no-data">No data</div>';
+        return;
+      }
+
+      const scaleMax = 12;
+
+      // Goal line at 8h
+      const goalPct = (8 / scaleMax) * 100;
+      const goalLine = document.createElement('div');
+      goalLine.className = 'goal-line';
+      goalLine.style.bottom = goalPct + '%';
+      goalLine.innerHTML = '<span class="goal-line-label">8h</span>';
+      container.appendChild(goalLine);
+
+      data.forEach(d => {
+        const duration = d.sleep || 0;
+        const heightPct = (duration / scaleMax) * 100;
+
+        const barContainer = document.createElement('div');
+        barContainer.className = 'bar-container';
+
+        const barValue = document.createElement('div');
+        barValue.className = 'bar-value';
+        barValue.textContent = duration ? duration.toFixed(1) : '';
+
+        const barWrapper = document.createElement('div');
+        barWrapper.className = 'bar-wrapper';
+
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.style.height = Math.max(heightPct, duration > 0 ? 3 : 0) + '%';
+
+        if (d.deep || d.rem) {
+          const deepPct = d.deep * 100;
+          const remPct = d.rem * 100;
+          bar.style.background = 'linear-gradient(to top, var(--purple) 0%, var(--purple) ' + deepPct + '%, #6366f1 ' + deepPct + '%, #6366f1 ' + (deepPct + remPct) + '%, #a78bfa ' + (deepPct + remPct) + '%, #a78bfa 100%)';
+        } else if (duration > 0) {
+          bar.style.background = duration >= 7 ? 'var(--success)' : duration >= 6 ? 'var(--warning)' : 'var(--danger)';
+        } else {
+          bar.style.background = '#334155';
+        }
+
+        const label = document.createElement('div');
+        label.className = 'bar-label';
+        label.textContent = formatLabel(d.date);
+
+        barWrapper.appendChild(bar);
+        barContainer.appendChild(barValue);
+        barContainer.appendChild(barWrapper);
+        barContainer.appendChild(label);
+        container.appendChild(barContainer);
+      });
+    }
+
+    function renderWeightGoal(current, goal, constraints) {
+      const container = document.getElementById('weight-goals');
+      if (!current || !goal) {
+        container.innerHTML = '<div class="no-data">No weight data</div>';
+        return;
+      }
+
+      const startWeight = constraints.current_weight_kg || current;
+      const toGo = current - goal;
+      const totalToLose = startWeight - goal;
+      const lost = startWeight - current;
+      const progressPct = totalToLose > 0 ? Math.max(0, Math.min((lost / totalToLose) * 100, 100)) : 0;
+
+      container.innerHTML =
+        '<div class="goal-item"><span>Current</span><span>' + current.toFixed(1) + ' kg</span></div>' +
+        '<div class="goal-item"><span>Goal</span><span>' + goal + ' kg</span></div>' +
+        '<div class="goal-item"><span>To Go</span><span style="color: ' + (toGo > 0 ? 'var(--warning)' : 'var(--success)') + '">' + (toGo > 0 ? '-' : '') + Math.abs(toGo).toFixed(1) + ' kg</span></div>' +
+        '<div class="progress-bar"><div class="progress-fill" style="width: ' + progressPct.toFixed(1) + '%"></div></div>' +
+        '<div style="text-align: center; margin-top: 6px; font-size: 0.75rem; color: #94a3b8;">' + progressPct.toFixed(0) + '% of ' + totalToLose.toFixed(0) + ' kg goal</div>';
+    }
+
+    loadData();
+    setInterval(loadData, REFRESH_INTERVAL);
+  </script>
+</body>
+</html>

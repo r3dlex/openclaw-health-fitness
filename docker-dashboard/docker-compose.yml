@@ -1,0 +1,11 @@
+services:
+  health-dashboard:
+    build: .
+    container_name: health-dashboard
+    ports:
+      - "${DASHBOARD_PORT:-8765}:80"
+    volumes:
+      - "${HEALTH_FITNESS_DATA_FOLDER}:/usr/share/nginx/html/data:ro"
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ:-Europe/Berlin}

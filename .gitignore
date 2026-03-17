@@ -1,28 +1,57 @@
-# Angular specific
-/dist/
-/out-tsc/
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+credentials/
+secrets/
+
+# Data (lives externally via HEALTH_FITNESS_DATA_FOLDER)
+data/
+
+# Reports & Logs (generated output, not source)
+reports/
+logs/
+
+# OpenClaw workspace state
+.openclaw/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# Node (legacy/tooling)
+node_modules/
+package-lock.json
+yarn.lock
+dist/
+out-tsc/
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+.vscode/
+*.code-workspace
+
+# Docker
+docker-dashboard/html/data
+
+# Temp
 /tmp/
-/coverage/
-/e2e/test-output/
-/.angular/
-.angular/
-
-# Node modules and dependency files
-/node_modules/
-/package-lock.json
-/yarn.lock
-
-# Environment files
-/.env
-
-# Angular CLI and build artefacts
-/.angular-cli.json
-/.ng/
-
-# TypeScript cache
-*.tsbuildinfo
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+*.tmp
+*.bak
