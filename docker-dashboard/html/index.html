@@ -30,12 +30,18 @@
     .header h1 { font-size: 2rem; margin-bottom: 5px; }
     .header p { color: #94a3b8; font-size: 0.9rem; }
 
-    .period-selector {
+    .nav-row {
       display: flex;
       justify-content: center;
+      align-items: center;
       gap: 10px;
       margin-bottom: 20px;
       flex-wrap: wrap;
+    }
+
+    .period-selector {
+      display: flex;
+      gap: 6px;
     }
 
     .period-btn {
@@ -56,6 +62,128 @@
       color: var(--bg);
       font-weight: bold;
     }
+
+    .nav-btn {
+      width: 36px;
+      height: 36px;
+      border: none;
+      border-radius: 50%;
+      background: var(--card-bg);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .nav-btn:hover { background: #334155; }
+    .nav-btn:disabled { opacity: 0.3; cursor: default; }
+
+    .nav-label {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      min-width: 140px;
+      text-align: center;
+    }
+
+    /* ── Timeline scrubber ── */
+    .timeline-container {
+      max-width: 700px;
+      margin: 0 auto 24px;
+      padding: 0 10px;
+    }
+
+    .timeline-track {
+      position: relative;
+      height: 36px;
+      display: flex;
+      align-items: center;
+    }
+
+    .timeline-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #334155;
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .timeline-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: grab;
+      box-shadow: 0 0 6px rgba(34, 211, 238, 0.5);
+      transition: transform 0.1s;
+    }
+
+    .timeline-slider::-webkit-slider-thumb:active {
+      cursor: grabbing;
+      transform: scale(1.3);
+    }
+
+    .timeline-slider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border: none;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: grab;
+      box-shadow: 0 0 6px rgba(34, 211, 238, 0.5);
+    }
+
+    .timeline-ticks {
+      display: flex;
+      justify-content: space-between;
+      padding: 0 2px;
+      margin-top: 2px;
+    }
+
+    .timeline-tick {
+      font-size: 0.6rem;
+      color: #64748b;
+      text-align: center;
+      flex: 1;
+    }
+
+    .timeline-tick.active {
+      color: var(--accent);
+      font-weight: bold;
+    }
+
+    .timeline-window {
+      position: absolute;
+      top: 0;
+      height: 6px;
+      background: rgba(34, 211, 238, 0.15);
+      border-radius: 3px;
+      pointer-events: none;
+      margin-top: 15px;
+    }
+
+    .today-btn {
+      display: block;
+      margin: 6px auto 0;
+      padding: 3px 14px;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      background: transparent;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 0.7rem;
+      transition: all 0.2s;
+    }
+
+    .today-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .today-btn:disabled { opacity: 0.3; cursor: default; }
 
     .summary-grid {
       display: grid;
@@ -237,11 +365,27 @@
     <p>Real-time data &bull; Auto-refreshes every 30s</p>
   </div>
 
-  <div class="period-selector">
-    <button class="period-btn" id="btn-day" onclick="setPeriod('day')">Today</button>
-    <button class="period-btn active" id="btn-week" onclick="setPeriod('week')">Week</button>
-    <button class="period-btn" id="btn-month" onclick="setPeriod('month')">Month</button>
-    <button class="period-btn" id="btn-year" onclick="setPeriod('year')">Year</button>
+  <div class="nav-row">
+    <button class="nav-btn" id="nav-prev" onclick="navigate(-1)">&larr;</button>
+    <div class="period-selector">
+      <button class="period-btn" id="btn-day" onclick="setPeriod('day')">Today</button>
+      <button class="period-btn active" id="btn-week" onclick="setPeriod('week')">Week</button>
+      <button class="period-btn" id="btn-month" onclick="setPeriod('month')">Month</button>
+      <button class="period-btn" id="btn-year" onclick="setPeriod('year')">Year</button>
+    </div>
+    <button class="nav-btn" id="nav-next" onclick="navigate(1)">&rarr;</button>
+  </div>
+  <div class="nav-row">
+    <span class="nav-label" id="nav-label"></span>
+  </div>
+
+  <div class="timeline-container" id="timeline-container">
+    <div class="timeline-track">
+      <input type="range" class="timeline-slider" id="timeline-slider" min="0" max="100" value="100">
+      <div class="timeline-window" id="timeline-window"></div>
+    </div>
+    <div class="timeline-ticks" id="timeline-ticks"></div>
+    <button class="today-btn" id="today-btn" onclick="snapToToday()" disabled>↻ Today</button>
   </div>
 
   <div class="summary-grid">
@@ -312,28 +456,179 @@
     const REFRESH_INTERVAL = 30000;
 
     let currentPeriod = 'week';
+    let offset = 0; // 0 = current, -1 = previous, etc.
+    let dataEarliestDate = null;  // earliest date across all data sources
+    let sliderSuppressUpdate = false; // prevent feedback loops
+
+    /* ── Navigation ─────────────────────────────────── */
 
     function setPeriod(period) {
       currentPeriod = period;
+      offset = 0;
       document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
       const el = document.getElementById('btn-' + period);
       if (el) el.classList.add('active');
       loadData();
     }
 
+    function navigate(dir) {
+      offset += dir;
+      if (offset > 0) offset = 0;
+      loadData();
+    }
+
+    function snapToToday() {
+      offset = 0;
+      loadData();
+    }
+
+    function updateNavLabel(startDate, endDate) {
+      const fmtShort = d => d.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+      const fmtMonth = d => d.toLocaleDateString('en', { month: 'long', year: 'numeric' });
+      const fmtYear = d => d.getFullYear().toString();
+      let label = '';
+      if (currentPeriod === 'day') {
+        label = startDate.toLocaleDateString('en', { weekday: 'long', month: 'short', day: 'numeric' });
+      } else if (currentPeriod === 'week') {
+        label = fmtShort(startDate) + ' – ' + fmtShort(endDate);
+      } else if (currentPeriod === 'month') {
+        label = fmtMonth(startDate);
+      } else {
+        label = fmtYear(startDate) + ' – ' + fmtYear(endDate);
+      }
+      document.getElementById('nav-label').textContent = label;
+      document.getElementById('nav-next').disabled = (offset >= 0);
+      document.getElementById('today-btn').disabled = (offset >= 0);
+
+      // Update timeline slider position
+      updateSliderFromOffset(endDate);
+    }
+
+    /* ── Timeline slider ──────────────────────────────── */
+
+    function initTimeline(earliestDate) {
+      dataEarliestDate = earliestDate;
+      const slider = document.getElementById('timeline-slider');
+      const ticksEl = document.getElementById('timeline-ticks');
+
+      const today = new Date();
+      const totalDays = Math.ceil((today - earliestDate) / 86400000);
+      slider.min = 0;
+      slider.max = totalDays;
+      slider.value = totalDays; // start at today
+
+      // Build month tick labels
+      const months = [];
+      const cur = new Date(earliestDate.getFullYear(), earliestDate.getMonth(), 1);
+      while (cur <= today) {
+        const dayOffset = Math.ceil((cur - earliestDate) / 86400000);
+        months.push({
+          label: cur.toLocaleDateString('en', { month: 'short', year: '2-digit' }),
+          pct: (dayOffset / totalDays) * 100
+        });
+        cur.setMonth(cur.getMonth() + 1);
+      }
+
+      ticksEl.innerHTML = '';
+      months.forEach(m => {
+        const tick = document.createElement('span');
+        tick.className = 'timeline-tick';
+        tick.textContent = m.label;
+        ticksEl.appendChild(tick);
+      });
+
+      // Slider input handler
+      slider.oninput = () => {
+        if (sliderSuppressUpdate) return;
+        const dayVal = parseInt(slider.value);
+        const targetDate = new Date(earliestDate);
+        targetDate.setDate(targetDate.getDate() + dayVal);
+        setOffsetFromDate(targetDate);
+      };
+    }
+
+    /** Compute offset value from a target "end" date */
+    function setOffsetFromDate(targetDate) {
+      const today = new Date();
+      if (currentPeriod === 'day') {
+        offset = Math.round((targetDate - today) / 86400000);
+      } else if (currentPeriod === 'week') {
+        offset = Math.round((targetDate - today) / (7 * 86400000));
+      } else if (currentPeriod === 'month') {
+        offset = (targetDate.getFullYear() - today.getFullYear()) * 12 + (targetDate.getMonth() - today.getMonth());
+      } else {
+        offset = targetDate.getFullYear() - today.getFullYear();
+      }
+      if (offset > 0) offset = 0;
+      loadData();
+    }
+
+    /** Sync slider thumb to match the current offset */
+    function updateSliderFromOffset(endDate) {
+      if (!dataEarliestDate) return;
+      const slider = document.getElementById('timeline-slider');
+      const totalDays = parseInt(slider.max);
+      const dayVal = Math.ceil((endDate - dataEarliestDate) / 86400000);
+      sliderSuppressUpdate = true;
+      slider.value = Math.max(0, Math.min(dayVal, totalDays));
+      sliderSuppressUpdate = false;
+
+      // Highlight the visible window on the track
+      updateTimelineWindow(endDate);
+    }
+
+    /** Draw a translucent overlay showing the currently visible date range */
+    function updateTimelineWindow(endDate) {
+      const win = document.getElementById('timeline-window');
+      if (!dataEarliestDate) { win.style.display = 'none'; return; }
+      const today = new Date();
+      const totalDays = Math.ceil((today - dataEarliestDate) / 86400000) || 1;
+
+      // Compute window start date based on period
+      let windowStart = new Date(endDate);
+      if (currentPeriod === 'week') windowStart.setDate(windowStart.getDate() - 6);
+      else if (currentPeriod === 'month') windowStart = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+      else if (currentPeriod === 'year') { windowStart = new Date(endDate); windowStart.setFullYear(windowStart.getFullYear() - 1); }
+
+      const startPct = Math.max(0, (windowStart - dataEarliestDate) / 86400000 / totalDays * 100);
+      const endPct = Math.min(100, (endDate - dataEarliestDate) / 86400000 / totalDays * 100);
+
+      win.style.display = 'block';
+      win.style.left = startPct + '%';
+      win.style.width = Math.max(endPct - startPct, 1) + '%';
+    }
+
+    /* ── Date Ranges ────────────────────────────────── */
+
     function getDateRange() {
-      const end = new Date();
-      const start = new Date();
+      const today = new Date();
+      let end = new Date(today);
+      let start = new Date(today);
 
       if (currentPeriod === 'day') {
-        // Just today
+        end.setDate(end.getDate() + offset);
+        start = new Date(end);
       } else if (currentPeriod === 'week') {
+        end.setDate(end.getDate() + offset * 7);
+        start = new Date(end);
         start.setDate(end.getDate() - 6);
       } else if (currentPeriod === 'month') {
-        start.setMonth(end.getMonth() - 1);
+        // Move to the target month
+        end.setMonth(end.getMonth() + offset);
+        // End = last day of that month
+        start = new Date(end.getFullYear(), end.getMonth(), 1);
+        end = new Date(end.getFullYear(), end.getMonth() + 1, 0);
+        // If current month, cap at today
+        if (offset === 0) end = new Date(today);
       } else if (currentPeriod === 'year') {
+        end.setFullYear(end.getFullYear() + offset);
+        start = new Date(end);
         start.setFullYear(end.getFullYear() - 1);
+        start.setDate(start.getDate() + 1);
+        if (offset === 0) end = new Date(today);
       }
+
+      updateNavLabel(start, end);
 
       const dates = [];
       const current = new Date(start);
@@ -341,17 +636,50 @@
         dates.push(current.toISOString().slice(0, 10));
         current.setDate(current.getDate() + 1);
       }
-      return dates;
+      return { dates, start, end };
     }
 
+    function getMonthRange(start, end) {
+      const months = [];
+      const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+      const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
+      while (cur <= endMonth) {
+        const y = cur.getFullYear();
+        const m = String(cur.getMonth() + 1).padStart(2, '0');
+        months.push(y + '-' + m);
+        cur.setMonth(cur.getMonth() + 1);
+      }
+      return months;
+    }
+
+    /* ── Labels ──────────────────────────────────────── */
+
     function formatLabel(dateStr) {
+      if (currentPeriod === 'year') {
+        const [y, m] = dateStr.split('-');
+        const date = new Date(parseInt(y), parseInt(m) - 1, 1);
+        return date.toLocaleDateString('en', { month: 'short' });
+      }
+
       const parts = dateStr.split('-');
       const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-      if (currentPeriod === 'day') return 'Today';
-      if (currentPeriod === 'week') return date.toLocaleDateString('en', {weekday: 'short'});
-      if (currentPeriod === 'month') return parts[2];
-      return date.toLocaleDateString('en', {month: 'short'});
+      if (currentPeriod === 'day') {
+        return date.toLocaleDateString('en', { weekday: 'short', day: 'numeric' });
+      }
+      if (currentPeriod === 'week') {
+        return date.toLocaleDateString('en', { weekday: 'short' });
+      }
+      if (currentPeriod === 'month') {
+        const day = parseInt(parts[2]);
+        if (day === 1 || day % 5 === 0) {
+          return day;
+        }
+        return '';
+      }
+      return date.toLocaleDateString('en', { month: 'short' });
     }
+
+    /* ── Data helpers ────────────────────────────────── */
 
     function epochDaysToDate(val) {
       const num = parseInt(val);
@@ -363,108 +691,12 @@
       return String(val);
     }
 
-    async function loadData() {
-      try {
-        const [nutrition, hydration, sleep, steps, bodyMetrics, config] = await Promise.all([
-          fetchJSON('nutrition.json'),
-          fetchJSON('hydration.json'),
-          fetchJSON('sleep.json'),
-          fetchJSON('steps.json'),
-          fetchJSON('body_metrics.json'),
-          fetchJSON('config.json')
-        ]);
-
-        const dates = getDateRange();
-
-        // Normalize sleep dates (Health Connect uses epoch days)
-        const normalizedSleep = sleep.map(s => ({
-          ...s,
-          date: epochDaysToDate(s.date)
-        }));
-
-        // Deduplicate sleep by date (keep longest)
-        const sleepByDate = {};
-        normalizedSleep.forEach(s => {
-          if (!sleepByDate[s.date] || (s.duration_hours || 0) > (sleepByDate[s.date].duration_hours || 0)) {
-            sleepByDate[s.date] = s;
-          }
-        });
-
-        // Calculate daily stats
-        const stats = dates.map(date => {
-          const dayNut = nutrition.filter(n => n.timestamp && n.timestamp.startsWith(date));
-          const dayHyd = hydration.filter(h => h.timestamp && h.timestamp.startsWith(date));
-
-          return {
-            date,
-            calories: dayNut.reduce((s, n) => s + (n.estimated_calories || 0), 0),
-            protein: dayNut.reduce((s, n) => s + (n.protein_grams || 0), 0),
-            hydration: dayHyd.reduce((s, h) => s + (h.net_hydration_ml || 0), 0),
-            steps: steps?.by_date?.[date] || 0
-          };
-        });
-
-        // Averages (only count days with actual data)
-        const withCals = stats.filter(s => s.calories > 0);
-        const withHyd = stats.filter(s => s.hydration > 0);
-        const withSteps = stats.filter(s => s.steps > 0);
-
-        const avg = (arr, field) => arr.length ? Math.round(arr.reduce((s, d) => s + d[field], 0) / arr.length) : 0;
-
-        document.getElementById('sum-calories').textContent = avg(withCals, 'calories') || '--';
-        document.getElementById('sum-protein').textContent = avg(withCals, 'protein') || '--';
-        document.getElementById('sum-hydration').textContent = avg(withHyd, 'hydration') || '--';
-        document.getElementById('sum-steps').textContent = avg(withSteps, 'steps') ? avg(withSteps, 'steps').toLocaleString() : '--';
-
-        // Sleep average
-        const sleepInRange = dates.map(d => sleepByDate[d]).filter(s => s && s.duration_hours);
-        let avgSleep = 0;
-        if (sleepInRange.length) {
-          avgSleep = sleepInRange.reduce((s, d) => s + d.duration_hours, 0) / sleepInRange.length;
-        } else {
-          // Fall back to most recent monthly summary
-          const monthly = Object.values(sleepByDate).filter(s => s.date && s.date.length <= 7 && s.duration_hours);
-          if (monthly.length) avgSleep = monthly[monthly.length - 1].duration_hours;
-        }
-        document.getElementById('sum-sleep').textContent = avgSleep ? avgSleep.toFixed(1) : '--';
-
-        // Weight
-        const constraints = config?.user_constraints || {};
-        const weightGoal = constraints.weight_goal_kg || 98;
-        let latestWeight = constraints.current_weight_kg || 0;
-
-        if (bodyMetrics?.by_date) {
-          const weightDates = Object.keys(bodyMetrics.by_date).sort();
-          if (weightDates.length) {
-            latestWeight = bodyMetrics.by_date[weightDates[weightDates.length - 1]];
-          }
-        }
-        document.getElementById('sum-weight').textContent = latestWeight ? latestWeight.toFixed(1) : '--';
-
-        // Render charts
-        renderBarChart('calories-chart', stats, 'calories', 2800, 2500);
-        renderBarChart('hydration-chart', stats, 'hydration', 3500, 3000);
-        renderBarChart('protein-chart', stats, 'protein', 220, 180);
-
-        // Sleep chart
-        const sleepStats = dates.map(date => {
-          const entry = sleepByDate[date];
-          return {
-            date,
-            sleep: entry ? entry.duration_hours : 0,
-            deep: entry ? (entry.deep_sleep_pct || 0) : 0,
-            rem: entry ? (entry.rem_sleep_pct || 0) : 0
-          };
-        });
-        renderSleepChart('sleep-chart', sleepStats);
-
-        renderBarChart('steps-chart', stats, 'steps', 15000, 10000);
-        renderWeightGoal(latestWeight, weightGoal, constraints);
-        document.getElementById('update-time').textContent = new Date().toLocaleString();
-
-      } catch (e) {
-        console.error('Error loading data:', e);
-      }
+    /** Normalize hydration entry: handles both old (net_hydration_ml) and new (amount_ml) formats */
+    function getHydrationMl(entry) {
+      if (entry.net_hydration_ml && entry.net_hydration_ml > 0) return entry.net_hydration_ml;
+      if (entry.amount_ml) return entry.amount_ml;
+      if (entry.volume_ml) return entry.volume_ml;
+      return 0;
     }
 
     async function fetchJSON(filename) {
@@ -477,6 +709,176 @@
       }
     }
 
+    /* ── Main data loader ───────────────────────────── */
+
+    async function loadData() {
+      try {
+        const [nutrition, hydration, sleep, steps, bodyMetrics, config] = await Promise.all([
+          fetchJSON('nutrition.json'),
+          fetchJSON('hydration.json'),
+          fetchJSON('sleep.json'),
+          fetchJSON('steps.json'),
+          fetchJSON('body_metrics.json'),
+          fetchJSON('config.json')
+        ]);
+
+        const { dates, start, end } = getDateRange();
+        const constraints = config?.user_constraints || {};
+
+        // ── Compute earliest data date (once) for timeline ──
+        if (!dataEarliestDate) {
+          const allDates = [];
+          nutrition.forEach(n => { if (n.timestamp) allDates.push(n.timestamp.slice(0, 10)); });
+          hydration.forEach(h => { if (h.timestamp) allDates.push(h.timestamp.slice(0, 10)); });
+          if (steps?.by_date) Object.keys(steps.by_date).forEach(d => allDates.push(d));
+          sleep.forEach(s => {
+            const d = epochDaysToDate(s.date);
+            if (d && d.length === 10) allDates.push(d);
+          });
+          if (allDates.length) {
+            allDates.sort();
+            initTimeline(new Date(allDates[0] + 'T00:00:00'));
+          }
+        }
+
+        // ── Normalize sleep dates ──
+        const normalizedSleep = sleep
+          .map(s => ({ ...s, date: epochDaysToDate(s.date) }))
+          .filter(s => s.date && s.date.length === 10); // only daily entries (skip monthly "2020-10")
+
+        const sleepByDate = {};
+        normalizedSleep.forEach(s => {
+          if (!sleepByDate[s.date] || (s.duration_hours || 0) > (sleepByDate[s.date].duration_hours || 0)) {
+            sleepByDate[s.date] = s;
+          }
+        });
+
+        // ── Daily stats ──
+        const dailyStats = dates.map(date => {
+          const dayNut = nutrition.filter(n => n.timestamp && n.timestamp.startsWith(date));
+          const dayHyd = hydration.filter(h => h.timestamp && h.timestamp.startsWith(date));
+
+          return {
+            date,
+            calories: dayNut.reduce((s, n) => s + (n.estimated_calories || 0), 0),
+            protein: dayNut.reduce((s, n) => s + (n.protein_grams || 0), 0),
+            hydration: dayHyd.reduce((s, h) => s + getHydrationMl(h), 0),
+            steps: steps?.by_date?.[date] || 0
+          };
+        });
+
+        // ── Aggregate for year view ──
+        let stats;
+        if (currentPeriod === 'year') {
+          const months = getMonthRange(start, end);
+          stats = months.map(monthKey => {
+            const monthDays = dailyStats.filter(d => d.date.startsWith(monthKey));
+            const avgField = (field) => {
+              const valid = monthDays.filter(d => d[field] > 0);
+              return valid.length ? Math.round(valid.reduce((s, d) => s + d[field], 0) / valid.length) : 0;
+            };
+            return {
+              date: monthKey,
+              calories: avgField('calories'),
+              protein: avgField('protein'),
+              hydration: avgField('hydration'),
+              steps: avgField('steps')
+            };
+          });
+        } else {
+          stats = dailyStats;
+        }
+
+        // ── Summary cards ──
+        // Use dailyStats (not aggregated) for averages so they reflect actual daily averages
+        const srcStats = dailyStats;
+        const withCals = srcStats.filter(s => s.calories > 0);
+        const withProt = srcStats.filter(s => s.protein > 0);
+        const withHyd = srcStats.filter(s => s.hydration > 0);
+        const withSteps = srcStats.filter(s => s.steps > 0);
+
+        const avg = (arr, field) => arr.length ? Math.round(arr.reduce((s, d) => s + d[field], 0) / arr.length) : 0;
+
+        document.getElementById('sum-calories').textContent = avg(withCals, 'calories') || '--';
+        document.getElementById('sum-protein').textContent = avg(withProt, 'protein') || '--';
+        document.getElementById('sum-hydration').textContent = avg(withHyd, 'hydration') || '--';
+        document.getElementById('sum-steps').textContent = avg(withSteps, 'steps') ? avg(withSteps, 'steps').toLocaleString() : '--';
+
+        // Sleep average for displayed range
+        const sleepInRange = dates.map(d => sleepByDate[d]).filter(s => s && s.duration_hours);
+        const avgSleep = sleepInRange.length
+          ? sleepInRange.reduce((s, d) => s + d.duration_hours, 0) / sleepInRange.length
+          : 0;
+        document.getElementById('sum-sleep').textContent = avgSleep ? avgSleep.toFixed(1) : '--';
+
+        // Weight — use earliest body_metrics entry as start, latest as current
+        const weightGoal = constraints.weight_goal_kg || 98;
+        let latestWeight = 0;
+        let startWeight = constraints.current_weight_kg || 0;
+
+        if (bodyMetrics?.by_date) {
+          const weightDates = Object.keys(bodyMetrics.by_date).sort();
+          if (weightDates.length) {
+            startWeight = bodyMetrics.by_date[weightDates[0]];
+            latestWeight = bodyMetrics.by_date[weightDates[weightDates.length - 1]];
+          }
+        }
+        if (!latestWeight) latestWeight = constraints.current_weight_kg || 0;
+        document.getElementById('sum-weight').textContent = latestWeight ? latestWeight.toFixed(1) : '--';
+
+        // ── Render charts ──
+        const calGoal = constraints.min_daily_calories || 2500;
+        const calMax = constraints.max_daily_calories || 2800;
+        const protGoal = constraints.min_daily_protein_g || 180;
+        const hydGoal = constraints.min_daily_hydration_ml || 3000;
+        const stepsGoal = constraints.steps_target || 10000;
+        const sleepGoal = constraints.sleep_target_hrs || 8;
+
+        renderBarChart('calories-chart', stats, 'calories', calMax, calGoal);
+        renderBarChart('hydration-chart', stats, 'hydration', hydGoal * 1.2, hydGoal);
+        renderBarChart('protein-chart', stats, 'protein', protGoal * 1.2, protGoal);
+
+        // Sleep chart
+        let sleepStats;
+        if (currentPeriod === 'year') {
+          const months = getMonthRange(start, end);
+          sleepStats = months.map(monthKey => {
+            const monthSleep = dates
+              .filter(d => d.startsWith(monthKey))
+              .map(d => sleepByDate[d])
+              .filter(s => s && s.duration_hours);
+            const avgDur = monthSleep.length
+              ? monthSleep.reduce((s, d) => s + d.duration_hours, 0) / monthSleep.length : 0;
+            const avgDeep = monthSleep.length
+              ? monthSleep.reduce((s, d) => s + (d.deep_sleep_pct || 0), 0) / monthSleep.length : 0;
+            const avgRem = monthSleep.length
+              ? monthSleep.reduce((s, d) => s + (d.rem_sleep_pct || 0), 0) / monthSleep.length : 0;
+            return { date: monthKey, sleep: avgDur, deep: avgDeep, rem: avgRem };
+          });
+        } else {
+          sleepStats = dates.map(date => {
+            const entry = sleepByDate[date];
+            return {
+              date,
+              sleep: entry ? entry.duration_hours : 0,
+              deep: entry ? (entry.deep_sleep_pct || 0) : 0,
+              rem: entry ? (entry.rem_sleep_pct || 0) : 0
+            };
+          });
+        }
+        renderSleepChart('sleep-chart', sleepStats, sleepGoal);
+
+        renderBarChart('steps-chart', stats, 'steps', stepsGoal * 1.5, stepsGoal);
+        renderWeightGoal(latestWeight, weightGoal, startWeight);
+        document.getElementById('update-time').textContent = new Date().toLocaleString();
+
+      } catch (e) {
+        console.error('Error loading data:', e);
+      }
+    }
+
+    /* ── Bar chart renderer ──────────────────────────── */
+
     function renderBarChart(containerId, data, field, maxRef, goalValue) {
       const container = document.getElementById(containerId);
       container.innerHTML = '';
@@ -486,8 +888,8 @@
         return;
       }
 
-      const dataMax = Math.max(...data.map(d => d[field]));
-      const scaleMax = Math.max(dataMax, maxRef) * 1.1;
+      const dataMax = Math.max(...data.map(d => d[field]), 0);
+      const scaleMax = Math.max(dataMax, maxRef) * 1.1 || 1;
 
       // Goal line
       if (goalValue && scaleMax > 0) {
@@ -537,7 +939,9 @@
       });
     }
 
-    function renderSleepChart(containerId, data) {
+    /* ── Sleep chart renderer ────────────────────────── */
+
+    function renderSleepChart(containerId, data, sleepGoal) {
       const container = document.getElementById(containerId);
       container.innerHTML = '';
 
@@ -548,12 +952,12 @@
 
       const scaleMax = 12;
 
-      // Goal line at 8h
-      const goalPct = (8 / scaleMax) * 100;
+      // Goal line
+      const goalPct = (sleepGoal / scaleMax) * 100;
       const goalLine = document.createElement('div');
       goalLine.className = 'goal-line';
       goalLine.style.bottom = goalPct + '%';
-      goalLine.innerHTML = '<span class="goal-line-label">8h</span>';
+      goalLine.innerHTML = '<span class="goal-line-label">' + sleepGoal + 'h</span>';
       container.appendChild(goalLine);
 
       data.forEach(d => {
@@ -579,7 +983,7 @@
           const remPct = d.rem * 100;
           bar.style.background = 'linear-gradient(to top, var(--purple) 0%, var(--purple) ' + deepPct + '%, #6366f1 ' + deepPct + '%, #6366f1 ' + (deepPct + remPct) + '%, #a78bfa ' + (deepPct + remPct) + '%, #a78bfa 100%)';
         } else if (duration > 0) {
-          bar.style.background = duration >= 7 ? 'var(--success)' : duration >= 6 ? 'var(--warning)' : 'var(--danger)';
+          bar.style.background = duration >= (sleepGoal - 1) ? 'var(--success)' : duration >= (sleepGoal - 2) ? 'var(--warning)' : 'var(--danger)';
         } else {
           bar.style.background = '#334155';
         }
@@ -596,29 +1000,43 @@
       });
     }
 
-    function renderWeightGoal(current, goal, constraints) {
+    /* ── Weight goal renderer ────────────────────────── */
+
+    function renderWeightGoal(current, goal, startWeight) {
       const container = document.getElementById('weight-goals');
       if (!current || !goal) {
         container.innerHTML = '<div class="no-data">No weight data</div>';
         return;
       }
 
-      const startWeight = constraints.current_weight_kg || current;
       const toGo = current - goal;
       const totalToLose = startWeight - goal;
       const lost = startWeight - current;
       const progressPct = totalToLose > 0 ? Math.max(0, Math.min((lost / totalToLose) * 100, 100)) : 0;
 
+      const direction = lost >= 0 ? 'lost' : 'gained';
+      const lostAbs = Math.abs(lost).toFixed(1);
+
       container.innerHTML =
+        '<div class="goal-item"><span>Start</span><span>' + startWeight.toFixed(1) + ' kg</span></div>' +
         '<div class="goal-item"><span>Current</span><span>' + current.toFixed(1) + ' kg</span></div>' +
         '<div class="goal-item"><span>Goal</span><span>' + goal + ' kg</span></div>' +
-        '<div class="goal-item"><span>To Go</span><span style="color: ' + (toGo > 0 ? 'var(--warning)' : 'var(--success)') + '">' + (toGo > 0 ? '-' : '') + Math.abs(toGo).toFixed(1) + ' kg</span></div>' +
-        '<div class="progress-bar"><div class="progress-fill" style="width: ' + progressPct.toFixed(1) + '%"></div></div>' +
+        '<div class="goal-item"><span>To Go</span><span style="color: ' + (toGo > 0 ? 'var(--warning)' : 'var(--success)') + '">' + (toGo > 0 ? '-' : '+') + Math.abs(toGo).toFixed(1) + ' kg</span></div>' +
+        '<div class="goal-item"><span>' + (lost >= 0 ? 'Lost' : 'Gained') + '</span><span style="color: ' + (lost >= 0 ? 'var(--success)' : 'var(--danger)') + '">' + lostAbs + ' kg</span></div>' +
+        '<div class="progress-bar"><div class="progress-fill" style="width: ' + progressPct.toFixed(1) + '%; background: ' + (lost >= 0 ? 'var(--success)' : 'var(--danger)') + '"></div></div>' +
         '<div style="text-align: center; margin-top: 6px; font-size: 0.75rem; color: #94a3b8;">' + progressPct.toFixed(0) + '% of ' + totalToLose.toFixed(0) + ' kg goal</div>';
     }
 
+    /* ── Init ────────────────────────────────────────── */
+
     loadData();
     setInterval(loadData, REFRESH_INTERVAL);
+
+    // Keyboard navigation
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft') navigate(-1);
+      else if (e.key === 'ArrowRight') navigate(1);
+    });
   </script>
 </body>
 </html>
