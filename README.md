@@ -19,10 +19,11 @@ Zero-install. Everything runs in Docker containers.
 ## Architecture
 
 ```
-agent.py           → Entry point (delegates to agent-helper Docker container)
-agent_helper/      → Python module with all business logic (Poetry + Docker)
-docker-dashboard/  → Dashboard container (nginx + static HTML, port 8765)
-specs/             → Specification documents
+agent.py               → Entry point (delegates to Docker containers)
+agent_helper/          → Python module with all business logic (Poetry + Docker)
+tools/pipeline_runner/ → Generic step-based pipeline execution engine
+docker-dashboard/      → Dashboard container (nginx + static HTML, port 8765)
+spec/                  → Specification documents + ADRs
 ```
 
 Data lives outside the repo at `$HEALTH_FITNESS_DATA_FOLDER` — see [.env.example](.env.example).
@@ -41,7 +42,15 @@ Data lives outside the repo at `$HEALTH_FITNESS_DATA_FOLDER` — see [.env.examp
 |------|----------|---------|
 | [CLAUDE.md](CLAUDE.md) | Developers | Setup, development, architecture |
 | [AGENTS.md](AGENTS.md) | OpenClaw agent | Operating manual, commands, autonomy |
-| [specs/](specs/) | Both | Data schemas, integrations, reporting |
+| [spec/](spec/) | Both | Architecture, pipelines, testing, data schemas, ADRs |
+
+## Testing
+
+```bash
+cd tools/pipeline_runner && poetry install --with dev && poetry run pytest
+```
+
+→ See [spec/TESTING.md](spec/TESTING.md) for full details.
 
 ## License
 

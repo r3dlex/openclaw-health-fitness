@@ -51,7 +51,15 @@ Thumbs.db
 # Docker
 docker-dashboard/html/data
 
+# Test / Coverage
+.coverage
+.pytest_cache/
+htmlcov/
+
 # Temp
 /tmp/
 *.tmp
 *.bak
+
+# Poetry lock (per-module, regenerated)
+poetry.lock

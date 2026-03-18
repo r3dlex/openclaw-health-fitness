@@ -1,0 +1,26 @@
+name: health-connect-import
+description: >
+  Download Health Connect ZIP export, extract SQLite, import steps and sleep
+  data to JSON, and sync updated files to the dashboard container.
+
+steps:
+  - name: download
+    function: pipeline_runner.bridges.health_connect:download_step
+    description: Locate Health Connect ZIP from Google Drive mount
+
+  - name: extract
+    function: pipeline_runner.bridges.health_connect:extract_step
+    description: Extract SQLite database from ZIP archive
+
+  - name: import_steps
+    function: pipeline_runner.bridges.health_connect:import_steps_step
+    description: Import step count records from SQLite to JSON
+
+  - name: import_sleep
+    function: pipeline_runner.bridges.health_connect:import_sleep_step
+    description: Import sleep records from SQLite to JSON
+
+  - name: dashboard_sync
+    function: pipeline_runner.bridges.health_connect:dashboard_sync_step
+    description: Copy updated JSON to dashboard container
+    on_failure: continue

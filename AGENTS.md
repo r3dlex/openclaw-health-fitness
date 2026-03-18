@@ -15,7 +15,7 @@ Then check today's log in `logs/` if it exists.
 
 Track health data. Generate reports. Manage the dashboard. Make decisions.
 
-For details, read `SPEC.md` — it points to everything in `specs/`.
+For details, read `SPEC.md` — it points to everything in `spec/`.
 
 ## Autonomy
 
@@ -41,7 +41,7 @@ All commands run in Docker. The image auto-builds on first use.
 
 Lives at `$HEALTH_FITNESS_DATA_FOLDER` (from `.env`). Never hardcode paths.
 
-See `specs/DATA_SCHEMA.md` for file formats.
+See `spec/DATA_SCHEMA.md` for file formats.
 
 ## Red Lines
 
