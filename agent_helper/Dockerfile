@@ -7,7 +7,7 @@ RUN pip install --no-cache-dir poetry && \
     poetry config virtualenvs.create false
 
 # Copy project files
-COPY pyproject.toml ./
+COPY pyproject.toml README.md ./
 COPY agent_helper/ agent_helper/
 
 # Install package
