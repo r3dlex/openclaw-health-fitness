@@ -149,6 +149,7 @@ jobs:
         run: |
           MATCHES=$(grep -rn -i '/Volumes/\|/Users/' --include='*.py' --include='*.yaml' --include='*.yml' --include='*.toml' --include='*.json' . \
             | grep -v '.git/' \
+            | grep -v '.github/' \
             | grep -v '__pycache__' \
             || true)
           if [ -n "$MATCHES" ]; then
