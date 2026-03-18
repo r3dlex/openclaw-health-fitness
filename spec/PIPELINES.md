@@ -114,4 +114,8 @@ tools/pipeline_runner/
   tests/                   ← Unit + integration tests
 ```
 
+## CI
+
+All pipeline YAML definitions are validated on every push. Pipeline runner tests run on Python 3.11–3.13 with an 80% coverage gate. See [spec/TESTING.md](TESTING.md) for details.
+
 → See [spec/ARCHITECTURE.md](ARCHITECTURE.md) for how pipelines fit into the system.

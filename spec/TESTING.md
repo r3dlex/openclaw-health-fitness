@@ -106,9 +106,35 @@ Defined in `tests/conftest.py`:
 - **Bridge modules**: tested via integration tests when `agent_helper` is available.
 - **All failure paths**: retries exhausted, YAML errors, missing functions, step exceptions.
 
-## CI Integration
+## CI / GitHub Actions
 
-Tests run via `pytest` with no external dependencies. The pipeline runner has no runtime dependency on `agent_helper` — bridge modules use lazy imports (`from agent_helper.importers import ...` inside step functions) so the core engine is fully testable in isolation.
+All tests run automatically on every push and pull request via [`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
+
+### What CI runs
+
+| Job | What It Does |
+|-----|-------------|
+| **Pipeline Runner Tests** | `pytest` on Python 3.11, 3.12, 3.13 with 80% coverage gate |
+| **Validate Pipelines** | `pipeline-runner validate` on all YAML definitions |
+| **Docker Build — Pipeline Runner** | Build image + run tests inside container |
+| **Docker Build — Dashboard** | Verify dashboard image builds |
+| **Docker Build — Agent Helper** | Verify agent-helper image builds |
+| **Secrets Scan** | Scan for hardcoded secrets, personal paths, tracked `.env` files |
+
+### Running CI locally
+
+```bash
+# Same commands CI uses
+cd tools/pipeline_runner
+poetry install --with dev
+poetry run pytest --cov=pipeline_runner --cov-fail-under=80 -v
+```
+
+### Coverage gate
+
+CI enforces **80% minimum** line coverage on the pipeline runner core. Bridge modules (which depend on `agent_helper`) are excluded from this threshold since they use lazy imports.
+
+The pipeline runner has no runtime dependency on `agent_helper` — bridge modules use lazy imports (`from agent_helper.importers import ...` inside step functions) so the core engine is fully testable in isolation.
 
 → For pipeline concepts, see [spec/PIPELINES.md](PIPELINES.md).
 → For architecture decisions, see [spec/adr/](adr/).

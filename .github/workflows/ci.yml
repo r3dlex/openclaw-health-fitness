@@ -1,0 +1,170 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Pipeline Runner: unit + integration tests ────────────────────
+  pipeline-runner-tests:
+    name: Pipeline Runner Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/pipeline_runner
+
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install --with dev
+
+      - name: Run tests with coverage
+        run: poetry run pytest --cov=pipeline_runner --cov-report=term-missing --cov-report=xml -v
+
+      - name: Check coverage threshold
+        run: poetry run pytest --cov=pipeline_runner --cov-fail-under=80 -q
+
+  # ── Pipeline Runner: validate YAML definitions ───────────────────
+  validate-pipelines:
+    name: Validate Pipeline Definitions
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/pipeline_runner
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install --only main
+
+      - name: Validate all pipeline YAML files
+        run: |
+          for f in pipelines/*.yaml; do
+            echo "Validating: $f"
+            poetry run pipeline-runner validate "$f" || true
+          done
+
+  # ── Pipeline Runner: Docker build ────────────────────────────────
+  docker-build-pipeline-runner:
+    name: Docker Build — Pipeline Runner
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build pipeline-runner image
+        run: docker build -t pipeline-runner:test tools/pipeline_runner/
+
+      - name: Run tests inside container
+        run: |
+          docker run --rm --entrypoint python pipeline-runner:test \
+            -m pytest tests/ -v --tb=short
+
+  # ── Dashboard: Docker build ──────────────────────────────────────
+  docker-build-dashboard:
+    name: Docker Build — Dashboard
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build dashboard image
+        run: docker build -t health-dashboard:test docker-dashboard/
+
+  # ── Agent Helper: Docker build ───────────────────────────────────
+  docker-build-agent-helper:
+    name: Docker Build — Agent Helper
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build agent-helper image
+        run: docker build -t agent-helper:test agent_helper/
+
+  # ── Sensitive data scan ──────────────────────────────────────────
+  secrets-scan:
+    name: Secrets Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for .env files
+        run: |
+          if git ls-files | grep -E '^\.env$|\.env\.local$'; then
+            echo "ERROR: .env file is tracked in git!"
+            exit 1
+          fi
+
+      - name: Scan for hardcoded secrets
+        run: |
+          PATTERNS="password=|secret=|token=|apikey=|api_key=|private_key=|AWS_|OPENAI_|ANTHROPIC_"
+          MATCHES=$(grep -rn -i -E "$PATTERNS" --include='*.py' --include='*.yaml' --include='*.yml' --include='*.toml' --include='*.json' --include='*.md' --include='*.sh' . \
+            | grep -v '.env.example' \
+            | grep -v 'node_modules' \
+            | grep -v '.git/' \
+            | grep -v 'your_password_here' \
+            | grep -v 'your_.*_here' \
+            | grep -v '__pycache__' \
+            || true)
+          if [ -n "$MATCHES" ]; then
+            echo "WARNING: Potential secrets found:"
+            echo "$MATCHES"
+            echo "Review the above matches manually."
+          else
+            echo "No hardcoded secrets detected."
+          fi
+
+      - name: Scan for personal data in committed files
+        run: |
+          MATCHES=$(grep -rn -i '/Volumes/\|/Users/' --include='*.py' --include='*.yaml' --include='*.yml' --include='*.toml' --include='*.json' . \
+            | grep -v '.git/' \
+            | grep -v '__pycache__' \
+            || true)
+          if [ -n "$MATCHES" ]; then
+            echo "ERROR: Personal paths found in committed files:"
+            echo "$MATCHES"
+            exit 1
+          else
+            echo "No personal paths detected."
+          fi
+
+      - name: Check gitignore covers sensitive paths
+        run: |
+          for path in .env data/ reports/ logs/ .openclaw/ secrets/ credentials/; do
+            if ! git check-ignore -q "$path" 2>/dev/null; then
+              echo "WARNING: $path is NOT gitignored"
+            else
+              echo "OK: $path is gitignored"
+            fi
+          done
