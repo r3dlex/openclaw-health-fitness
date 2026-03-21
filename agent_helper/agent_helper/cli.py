@@ -6,9 +6,21 @@ from datetime import datetime
 from .config import load_env
 
 
+def _mq_startup() -> None:
+    """Register with the MQ service and process inbox. Non-blocking on failure."""
+    try:
+        from .mq import register, process_inbox
+
+        register()
+        process_inbox()
+    except Exception:
+        pass  # MQ is optional — never block CLI commands
+
+
 def main() -> None:
     """Main CLI dispatcher."""
     load_env()
+    _mq_startup()
 
     if len(sys.argv) < 2:
         _usage()
@@ -60,6 +72,13 @@ def _cmd_daily() -> None:
 
     path = write_daily_report()
     print(f"  Daily report: {path}")
+
+    try:
+        from .mq import send_daily_report
+
+        send_daily_report(f"Daily health report generated: {path}")
+    except Exception:
+        pass
 
 
 def _cmd_weekly() -> None:

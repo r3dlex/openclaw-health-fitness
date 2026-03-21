@@ -14,6 +14,13 @@ from pathlib import Path
 ROOT = Path(__file__).parent
 IMAGE = "agent-helper:latest"
 
+# Env vars to forward into the Docker container (beyond the always-set ones).
+_ENV_FORWARD = [
+    "ZEPP_USER", "ZEPP_PASSWORD",
+    "GOOGLE_DRIVE_EMAIL", "HEALTH_CONNECT_BACKUP_DIR",
+    "TZ",
+]
+
 
 def _load_env():
     env_file = ROOT / ".env"
@@ -39,15 +46,21 @@ def _ensure_image():
 def _run_docker(args):
     data = os.environ.get("HEALTH_FITNESS_DATA_FOLDER", str(ROOT / "data"))
     port = os.environ.get("DASHBOARD_PORT", "8765")
-    return subprocess.run([
+    cmd = [
         "docker", "run", "--rm",
         "-v", f"{data}:/data",
         "-v", f"{ROOT}:/repo",
         "-e", "HEALTH_FITNESS_DATA_FOLDER=/data",
         "-e", f"DASHBOARD_PORT={port}",
         "--network", "host",
-        IMAGE,
-    ] + args).returncode
+    ]
+    # Forward all configured env vars into the container
+    for key in _ENV_FORWARD:
+        val = os.environ.get(key)
+        if val:
+            cmd += ["-e", f"{key}={val}"]
+    cmd.append(IMAGE)
+    return subprocess.run(cmd + args).returncode
 
 
 def _run_direct(args):

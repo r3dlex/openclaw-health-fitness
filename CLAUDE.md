@@ -60,6 +60,30 @@ pipeline-runner run pipelines/health_connect_import.yaml
 cd tools/pipeline_runner && poetry run pytest -v
 ```
 
+## Inter-Agent Message Queue
+
+This agent (`health_fitness_agent`) is registered with the OpenClaw inter-agent MQ at `http://127.0.0.1:18790`. The MQ client lives in `agent_helper/agent_helper/mq.py`.
+
+At every CLI invocation, the agent registers, sends a heartbeat, and processes its inbox. After daily reports, it broadcasts a summary to all agents.
+
+Other agents in the environment: `mail_agent`, `librarian_agent`, `sysadmin_agent`, `workday_agent`, `journalist_agent`.
+
+To check inbox or send messages manually:
+
+```bash
+# Check inbox
+curl -s http://127.0.0.1:18790/inbox/health_fitness_agent
+
+# Send a message
+curl -s -X POST http://127.0.0.1:18790/send -H 'Content-Type: application/json' \
+  -d '{"from":"health_fitness_agent","to":"mail_agent","type":"request","priority":"NORMAL","subject":"Test","body":"Hello"}'
+
+# List online agents
+curl -s http://127.0.0.1:18790/agents
+```
+
+File-based fallback queue: `~/Ws/Openclaw/openclaw-inter-agent-message-queue/queue/health_fitness_agent/`
+
 ## Further Reading
 
 - Architecture, data flow: [spec/ARCHITECTURE.md](spec/ARCHITECTURE.md)
