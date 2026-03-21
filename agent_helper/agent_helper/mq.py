@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,12 +24,31 @@ from urllib.request import Request, urlopen
 
 log = logging.getLogger("agent_helper.mq")
 
-AGENT_ID = "health_fitness_agent"
-MQ_HTTP_BASE = "http://127.0.0.1:18790"
+AGENT_ID = os.environ.get("IAMQ_AGENT_ID", "health_fitness_agent")
+MQ_HTTP_BASE = os.environ.get("IAMQ_HTTP_URL", "http://127.0.0.1:18790")
 MQ_QUEUE_DIR = Path.home() / "Ws" / "Openclaw" / "openclaw-inter-agent-message-queue" / "queue"
 
 # Timeout for HTTP requests to the MQ service (seconds)
 HTTP_TIMEOUT = 5
+
+# Registration metadata for agent discovery
+_AGENT_METADATA = {
+    "agent_id": AGENT_ID,
+    "name": "FitBot",
+    "emoji": "\U0001f4aa",  # 💪
+    "description": "Health data imports, daily reports, and dashboard management",
+    "capabilities": [
+        "health_data_import",
+        "daily_report",
+        "weekly_report",
+        "dashboard_management",
+        "steps_tracking",
+        "sleep_tracking",
+        "hydration_tracking",
+        "weight_tracking",
+        "pipeline_execution",
+    ],
+}
 
 
 # ---------------------------------------------------------------------------
@@ -127,8 +147,8 @@ def _write_message_file(msg: dict) -> Path | None:
 # ---------------------------------------------------------------------------
 
 def register() -> bool:
-    """Register health_fitness_agent with the MQ service."""
-    result = _post("/register", {"agent_id": AGENT_ID})
+    """Register health_fitness_agent with the MQ service (includes discovery metadata)."""
+    result = _post("/register", _AGENT_METADATA)
     if result:
         log.info(f"MQ registered via HTTP: {result}")
         return True
@@ -188,6 +208,25 @@ def broadcast(
 ) -> dict | None:
     """Broadcast a message to all agents."""
     return send_message("broadcast", msg_type, subject, body, priority)
+
+
+def reply(
+    original_msg: dict,
+    body: str,
+    subject: str | None = None,
+    priority: str | None = None,
+) -> dict | None:
+    """Reply to a message with proper threading (replyTo)."""
+    reply_subject = subject or f"Re: {original_msg.get('subject', '(no subject)')}"
+    reply_priority = priority or original_msg.get("priority", "NORMAL")
+    return send_message(
+        to=original_msg["from"],
+        msg_type="response",
+        subject=reply_subject,
+        body=body,
+        priority=reply_priority,
+        reply_to=original_msg.get("id"),
+    )
 
 
 def check_inbox() -> list[dict]:
