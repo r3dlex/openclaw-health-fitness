@@ -1,39 +1,37 @@
-# TOOLS.md - Local Notes
+# TOOLS.md - Environment Notes
 
-Skills define _how_ tools work. This file is for _your_ specifics — the stuff that's unique to your setup.
+Environment-specific configuration for this agent's setup.
 
-## What Goes Here
+## Inter-Agent Message Queue
 
-Things like:
+- **HTTP API**: http://127.0.0.1:18790
+- **WebSocket**: ws://127.0.0.1:18791/ws
+- **Agent ID**: `health_fitness_agent`
+- **MQ client**: `agent_helper/agent_helper/mq.py`
+- **File fallback**: `~/Ws/Openclaw/openclaw-inter-agent-message-queue/queue/health_fitness_agent/`
+- **Protocol docs**: `~/Ws/Openclaw/openclaw-inter-agent-message-queue/spec/PROTOCOL.md`
 
-- Camera names and locations
-- SSH hosts and aliases
-- Preferred voices for TTS
-- Speaker/room names
-- Device nicknames
-- Anything environment-specific
+## Dashboard
 
-## Examples
+- **URL**: http://localhost:8765
+- **Container**: `docker-dashboard/docker-compose.yml`
+- **Data mount**: `$HEALTH_FITNESS_DATA_FOLDER` → read-only in container
 
-```markdown
-### Cameras
+## Data Storage
 
-- living-room → Main area, 180° wide angle
-- front-door → Entrance, motion-triggered
+- **Location**: `$HEALTH_FITNESS_DATA_FOLDER` (set in `.env`)
+- **Files**: `config.json`, `steps.json`, `sleep.json`, `nutrition.json`, `body_metrics.json`
+- **Schema**: `spec/DATA_SCHEMA.md`
 
-### SSH
+## Cron
 
-- home-server → 192.168.1.100, user: admin
+- **Daily health sync**: `0 9 * * *` — runs `python3 agent.py daily`
+- **Log**: `logs/daily.log`
 
-### TTS
+## Docker
 
-- Preferred voice: "Nova" (warm, slightly British)
-- Default speaker: Kitchen HomePod
-```
-
-## Why Separate?
-
-Skills are shared. Your setup is yours. Keeping them apart means you can update skills without losing your notes, and share skills without leaking your infrastructure.
+- **Agent helper image**: `agent-helper:latest` (auto-builds on first run)
+- **Dashboard**: `docker compose -f docker-dashboard/docker-compose.yml up -d`
 
 ---
 

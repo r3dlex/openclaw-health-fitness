@@ -34,7 +34,7 @@ spec/                   ← Specification docs (→ see SPEC.md)
 
 ### OpenClaw agent files (read by FitBot, not by you)
 
-`AGENTS.md` · `SOUL.md` · `IDENTITY.md` · `USER.md` · `TOOLS.md` · `HEARTBEAT.md`
+`AGENTS.md` · `SOUL.md` · `IDENTITY.md` · `USER.md` · `TOOLS.md` · `HEARTBEAT.md` · `BOOT.md`
 
 ### What's gitignored
 
