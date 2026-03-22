@@ -48,6 +48,7 @@ _AGENT_METADATA = {
         "weight_tracking",
         "pipeline_execution",
     ],
+    "workspace": str(Path(__file__).resolve().parent.parent.parent),
 }
 
 
