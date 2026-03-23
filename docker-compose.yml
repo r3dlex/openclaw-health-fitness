@@ -1,0 +1,15 @@
+services:
+  # IAMQ sidecar — inter-agent messaging (Elixir/OTP, zero-install)
+  iamq:
+    build: ./iamq
+    restart: unless-stopped
+    environment:
+      IAMQ_HTTP_URL: http://host.docker.internal:18790
+      IAMQ_WS_URL: ws://host.docker.internal:18793/ws
+      IAMQ_AGENT_ID: health_fitness_agent
+      IAMQ_AGENT_NAME: FitBot
+      IAMQ_AGENT_EMOJI: "\U0001F4AA"
+      IAMQ_AGENT_DESC: "Health data imports, daily reports, and dashboard management"
+      IAMQ_AGENT_CAPABILITIES: health_data_import,daily_report,weekly_report,dashboard_management,steps_tracking,sleep_tracking,hydration_tracking,weight_tracking,pipeline_execution
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

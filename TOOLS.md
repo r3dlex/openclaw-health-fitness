@@ -5,7 +5,7 @@ Environment-specific configuration for this agent's setup.
 ## Inter-Agent Message Queue
 
 - **HTTP API**: http://127.0.0.1:18790
-- **WebSocket**: ws://127.0.0.1:18791/ws
+- **WebSocket**: ws://127.0.0.1:18793/ws
 - **Agent ID**: `health_fitness_agent`
 - **MQ client**: `agent_helper/agent_helper/mq.py`
 - **File fallback**: `~/Ws/Openclaw/openclaw-inter-agent-message-queue/queue/health_fitness_agent/`
