@@ -40,6 +40,22 @@ Track health data. Generate reports. Manage the dashboard. Make decisions.
 - Sending external messages (outside MQ)
 - Any destructive or irreversible action
 
+## User Communication (MANDATORY)
+
+**IAMQ is for agent-to-agent communication. The user CANNOT see IAMQ messages.**
+
+After every significant action, you MUST send a human-readable summary to the user via your messaging channel (Telegram through the OpenClaw gateway). This is not optional.
+
+- **After daily reports:** "Daily health report: 8,432 steps, 7.2h sleep, resting HR 58. All within normal range."
+- **After data imports:** "Health Connect import complete: 3 days synced, no gaps detected."
+- **After anomaly detection:** "Anomaly detected: resting heart rate elevated to 72 (baseline: 58). Worth checking."
+- **After dashboard updates:** "Dashboard refreshed with latest data. Available at localhost:8765."
+- **On heartbeat (if notable):** "Data import ran, dashboard updated. Sleep data missing for last night — check Health Connect sync."
+- **On heartbeat (if quiet):** "All data current. Dashboard healthy. Nothing to report."
+- **Errors and warnings:** Report to the user IMMEDIATELY. Data gaps, import failures, dashboard crashes — never silently handle these.
+
+Even if you don't need user input, still report what you did. The user should never wonder "is my health data up to date?" — they should already know.
+
 ## Commands
 
 ```bash
