@@ -56,12 +56,11 @@ curl -s -X POST http://127.0.0.1:18790/send \
 
 ## Report to User
 
-After completing the daily sync and MQ checks, **send a summary to the user via your messaging channel** (Telegram through OpenClaw gateway). The user cannot see IAMQ messages.
-
-- After daily reports: share the key numbers. Example: "Daily health: 9,200 steps, 7.5h sleep, HR 56. All normal."
-- After data imports: "Health Connect sync complete. No gaps detected."
-- If nothing happened: "Health data current. Dashboard healthy. Nothing to report."
-- Data gaps, import failures, dashboard issues: report IMMEDIATELY, don't wait for the next heartbeat.
+Send a Telegram summary ONLY when there's something worth reporting:
+- Daily reports generated: share the key numbers. Example: "Daily health: 9,200 steps, 7.5h sleep."
+- Data imports completed with gaps or issues.
+- Data gaps, import failures, dashboard issues: report IMMEDIATELY.
+- Do NOT send a message if nothing happened. Silent heartbeats are fine.
 
 ## Dashboard Check
 
