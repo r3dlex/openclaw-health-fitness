@@ -19,7 +19,7 @@ pipeline-runner = "pipeline_runner.runner:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short --cov=pipeline_runner --cov-report=term-missing --cov-fail-under=60"
 
 [build-system]
 requires = ["poetry-core"]
