@@ -51,6 +51,8 @@ def _run_docker(args):
         "docker", "run", "--rm",
         "-v", f"{data}:/data",
         "-v", f"{ROOT}:/repo",
+        "-v", f"{os.environ.get('CLOUD_STORAGE_PATH', str(Path.home() / 'Library' / 'CloudStorage'))}:/root/Library/CloudStorage",
+        "-v", "/var/run/docker.sock:/var/run/docker.sock",
         "-e", "HEALTH_FITNESS_DATA_FOLDER=/data",
         "-e", f"DASHBOARD_PORT={port}",
         "--network", "host",

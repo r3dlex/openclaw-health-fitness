@@ -44,6 +44,20 @@ Data lives outside the repo at `$HEALTH_FITNESS_DATA_FOLDER` — see [.env.examp
 | [AGENTS.md](AGENTS.md) | OpenClaw agent | Operating manual, commands, autonomy |
 | [spec/](spec/) | Both | Architecture, pipelines, testing, data schemas, ADRs |
 
+## Inter-Agent Message Queue
+
+This agent is registered as `health_fitness_agent` with the OpenClaw inter-agent MQ at `http://127.0.0.1:18790`. The MQ client lives in `agent_helper/agent_helper/mq.py`.
+
+On every CLI invocation the agent registers, sends a heartbeat, and processes its inbox. After generating daily reports it broadcasts a summary to all peer agents (`mail_agent`, `librarian_agent`, `sysadmin_agent`, `workday_agent`, `journalist_agent`).
+
+```bash
+# Check inbox
+curl -s http://127.0.0.1:18790/inbox/health_fitness_agent
+
+# List online agents
+curl -s http://127.0.0.1:18790/agents
+```
+
 ## Testing
 
 ```bash
