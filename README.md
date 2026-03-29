@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.svg" alt="Health &amp; Fitness Agent logo" width="96" height="96">
+</p>
+
 # OpenClaw Health & Fitness Agent
 
 Autonomous health tracking, reporting, and dashboarding — powered by [OpenClaw](https://docs.openclaw.ai).
